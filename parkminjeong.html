@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en"> 
+  <head>
+    <script src='./node_modules/web3/dist/web3.min.js'></script>
+    <script type="text/javascript" src="./abiobj.js">  </script> 
+    <script type="text/javascript" src="./address.js">  </script>
+    <!-- <script type="text/javascript" src="./rentTimer.js"></script> -->
+    <meta charset="utf-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script type="text/javascript"> 
+      var accounts;
+      var constructInstance;
+      var resultbox;
+      var eventLogs;
+      var returnBicycleBox;
+      console.log(address)
+      window.addEventListener('load', async () => {
+          if (window.ethereum) {
+              window.alert('Modern dapp browsers')
+          } else if (window.web3) {
+              window.alert('Legacy dapp browsers')
+          } else {
+              window.alert('Non-Ethereum browser detected. You should consider trying MetaMask!');
+          }
+      
+        let btn = document.getElementById("btn");
+        btn.addEventListener('click', btnClicked);    
+      });
+      
+      async function btnClicked() {
+        alert("btnClicked()");
+        window.accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const showAccount = document.querySelector('.showAccount');
+        showAccount.innerHTML = accounts[0];
+  
+        window.web3 = new Web3(window.ethereum);
+        contractInstance = await new window.web3.eth.Contract(abiobj, address);
+      
+        let btn = document.getElementById("rent30Button");
+          btn.addEventListener('click', rentBicycle30);
+          btn = document.getElementById("rent60Button");
+          btn.addEventListener('click', rentBicycle60);
+          btn = document.getElementById("returnBicycleButton");
+          btn.addEventListener('click', returnBicycle);
+          btn = document.getElementById("numContractsButton");
+          btn.addEventListener('click', numContracts);
+          btn = document.getElementById("getRenterInfoButton");
+          btn.addEventListener('click', getRenterInfo);    
+
+        resultbox = document.getElementById("resultbox");
+        eventLogs = document.getElementById("eventLogs");
+        returnBicycleBox = document.getElementById("returnBicycleBox");
+      
+      }
+      
+
+      async function rentBicycle30() {
+        if (contractInstance != null) {
+          try {
+            let val_bicycle_id_txt = document.getElementById("bicycleId30");
+            let val_bicycle_id = parseInt(val_bicycle_id_txt.value);
+            let val_renter_name_txt = document.getElementById("userName30");
+            let val_renter_name = val_renter_name_txt.value;
+
+            let value = await contractInstance.methods.rentBicycle30(val_bicycle_id, val_renter_name)
+              .send({
+                from: accounts[0],
+                value: "100"});
+            let event_log = value.events.LogRentBicycle
+            let returnValues_0 = event_log.returnValues["0"];
+            let returnValues_id =event_log.returnValues["_id"];
+            $('#eventLogs').append('<p>'+ returnValues_0+'계정에서 자전거' + returnValues_id+'번을 30분 대여했습니다'+ '</p>');
+
+            // eventLogs.innerHTML = JSON.stringify(value.events.LogRentBicycle);
+            console.log(document.getElementById(`bikeId${val_bicycle_id_txt.value}`).src)
+            document.getElementById(`bikeId${val_bicycle_id_txt.value}`).src='./img/bike-rent.jpg';
+            console.log(value.events.LogRentBicycle)
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+      async function rentBicycle60() {
+        if (contractInstance != null) {
+          try {
+            let val_bicycle_id_txt = document.getElementById("bicycleId60");
+            let val_bicycle_id = parseInt(val_bicycle_id_txt.value);
+            let val_renter_name_txt = document.getElementById("userName60");
+            let val_renter_name = val_renter_name_txt.value;
+            let value = await contractInstance.methods.rentBicycle60(val_bicycle_id, val_renter_name)
+              .send({
+                from:accounts[0],
+                value: "200"});
+            eventLogs.innerHTML = JSON.stringify(value.events.LogRentBicycle);
+            console.log(document.getElementById(`bikeId${val_bicycle_id_txt.value}`).src)
+            document.getElementById(`bikeId${val_bicycle_id_txt.value}`).src='./img/bike-rent.jpg';
+            let event_log = value.events.LogRentBicycle
+            let returnValues_0 = event_log.returnValues["0"];
+            let returnValues_id = event_log.returnValues["_id"];
+            $('#eventLogs').append('<p>'+ returnValues_0+'계정에서 자전거' + returnValues_id+'번을 60분 대여했습니다'+ '</p>');
+            // console.log(value)
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+      
+      async function returnBicycle() {
+        if (contractInstance != null) {
+          try {
+            let return_id_txt = document.getElementById("returnId");
+            let return_id = parseInt(return_id_txt.value);
+            let value = await contractInstance.methods.returnBicycle(return_id)
+              .send({from:accounts[0]});
+              returnBicycleBox.innerHTML =  `${return_id}번 자전거가 성공적으로 반납되었습니다`;
+              document.getElementById(`bikeId${return_id}`).src='./img/bike.jpg';
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+      
+      
+    
+      async function getRenterInfo() {
+        if (contractInstance != null) {
+          try {
+            let bicycle_id_txt = document.getElementById("renterId");
+            let bicycle_id = bicycle_id_txt.value;
+            const value = await contractInstance.methods.getRenterInfo(bicycle_id).call();
+            let info_address = value["0"];
+            let info_name = value["1"];
+            let info_end_time = value["2"];
+            let info_can_ride = value["3"]
+            let milliseconds = parseInt(info_end_time) * 1000 // 1575909015000
+            
+            const dateObject = new Date(milliseconds);
+
+            let humanDateFormat = dateObject.toLocaleString() 
+            if (info_name==="") {
+              resultbox.innerHTML=`현재 자전거 ${bicycle_id}번 이용자가 없습니다`;
+            }
+            else {resultbox.innerHTML = `\n현재 사용자 ${info_name} (address: ${info_address})이 ${humanDateFormat}까지 자전거 ${bicycle_id}번을 이용 합니다`;}
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+      
+      async function numContracts() {
+        if (contractInstance != null) {
+          try {
+            const value = await contractInstance.methods.numContracts().call();
+            totalContractNum.innerHTML = '현재까지 '+ value +' 건' ;
+ 
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+      
+      async function ownerClicked() {
+        if (contractInstance != null) {
+          try {
+          const value = await contractInstance.methods.owner().call();
+          resultbox.innerHTML = value;
+      
+          } catch (error) {
+              resultbox.innerHTML = "error occured";
+              console.log(error);
+          }
+        }
+      }
+
+    </script>
+  </head> 
+  <body>
+    <div class="container">
+      <h1> Project Name: Rent Bicycle / Team: 박민정(20171623)</h1>
+      <h4> <a href= "https://www.youtube.com/watch?v=7RhDu0A1Ypg">시연 동영상</a></h4>
+      <br/>
+      <div id="eventLogs">
+        대여 상황
+      </div>
+      <div class="bike-container">
+        <div class="bike-list-1" style="display: flex; justify-content: space-evenly;" >
+          <div class="bike-0" id="bike-id 0" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 0</span>
+            <img id="bikeId0" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-1" id="bike-id 1" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 1</span>
+            <img id="bikeId1" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-2" id="bike-id-2" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 2</span>
+            <img id="bikeId2" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-3" id="bike-id-3" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 3</span>
+            <img id="bikeId3" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-4" id="bike-id 4" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 4</span>
+            <img id="bikeId4" src="./img/bike.jpg" style="width: 200px;">
+          </div>        
+        </div>
+        <div class="bike-list-2" style="display: flex; justify-content: space-evenly;">
+          <div class="bike-5" id="bike-id 5" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 5</span>
+            <img id="bikeId5" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-6" id="bike-id 6" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 6</span>
+            <img id="bikeId6" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-7" id="bike-id 7" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 7</span>
+            <img id="bikeId7" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-8" id="bike-id 8" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 8</span>
+            <img  id="bikeId8"src="./img/bike.jpg" style="width: 200px;">
+          </div>
+          <div class="bike-9" id="bike-id 9" style="display: flex; flex-direction: column;">
+            <span> 자전거 번호: 9</span>
+            <img id="bikeId9" src="./img/bike.jpg" style="width: 200px;">
+          </div>
+        </div>
+      </div>
+      <input type="button" id="btn" value="click">
+      <h2>Account: <span class="showAccount"></span></h2>
+
+      <p id="inputBicycleBox30"></p>
+      <div class="rent30">
+        자전거 30분 대여 - 100 wei
+        <input type="text" id="bicycleId30" placeholder="자전거 번호 입력">
+        <input type="text" id="userName30" placeholder="사용자 이름 입력">
+        <input type="button" id="rent30Button" value="자전거 빌리기">
+      </div>
+      <br/>
+      <div class="rent60">
+        자전거 60분 대여 - 200 wei
+        <input type="text" id="bicycleId60" placeholder="자전거 번호 입력">
+        <input type="text" id="userName60" placeholder="사용자 이름 입력">
+        <input type="button" id="rent60Button" value="자전거 빌리기">
+      </div>
+      <br/>
+      <div class="return-bicycle">
+        자전거 반납하기
+        <input type="text" id="returnId" placeholder="자전거 번호 입력" value="">
+        <input type="button" id="returnBicycleButton" value="returnBicycle()">
+        <span id="returnBicycleBox"></span>
+      </div>
+      <br/>
+      <div class="num-contracts">
+        <span>총 대여 건 </span>
+        <input type="button" id="numContractsButton" value="numContracts">
+        <span id="totalContractNum"> </span>
+      </div>
+  
+      <br/>
+      <div class="get-renter-info">
+        <span>대여자 정보</span>
+        <input type="text" id="renterId" placeholder="자전거 번호 입력" value="">
+        <input type="button" id="getRenterInfoButton" value="getRenterInfo()">
+      </div>
+      <br/>
+      Result: <span id="resultbox"> </span>
+    </div>
+  </body> 
+</html>
